@@ -1,0 +1,6 @@
+ray
+pandas
+pyarrow
+boto3
+awscli
+fs_s3fs
