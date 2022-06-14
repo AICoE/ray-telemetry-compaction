@@ -1,6 +1,6 @@
 ray
 pandas
-pyarrow
+pyarrow>6.0.1
 boto3
-awscli
+awscli==1.25.8
 fs_s3fs
