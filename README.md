@@ -37,7 +37,18 @@ Read parquet files from remote path
 *Note: Specifying paths to multiple directories does not work with `read_parquet`. Issue and workaround: https://github.com/ray-project/ray/issues/24598*
 
 Write back a single parquet file. `.repartition(<number-of-files>)` is where number of files can be specified. 
->`df.repartition(1).write_parquet(path=path/to/destination, filesystem=fs_pyarrow)`
+> `df.repartition(1).write_parquet(path=path/to/destination, filesystem=fs_pyarrow)`
+
+## Ray Cluster Setup
+
+### What:
+Setup a Ray cluster on OpenShift, and add a JupyterHub notebook image that can connect to it.\
+Refer this PR: https://github.com/opendatahub-io/odh-manifests/pull/573 \
+Running the kustomize script sets up the Ray operator, and adds the `ray-ml-notebook` image to ODH JupyterHub.
+
+## Misc
+
+You can access the Ray dashboard via OpenShift: Networking -> Routes.
 
 
 
