@@ -2,5 +2,5 @@ ray
 pandas
 pyarrow
 boto3
-awscli
+awscli==1.25.8
 fs_s3fs
