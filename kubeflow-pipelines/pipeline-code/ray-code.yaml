@@ -1,0 +1,185 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: test-pipeline
+  annotations:
+    tekton.dev/output_artifacts: '{"imports": [{"key": "artifacts/$PIPELINERUN/imports/Output.tgz",
+      "name": "imports-Output", "path": "/tmp/outputs/Output/data"}]}'
+    tekton.dev/input_artifacts: '{}'
+    tekton.dev/artifact_bucket: mlpipeline
+    tekton.dev/artifact_endpoint: minio-service.kubeflow:9000
+    tekton.dev/artifact_endpoint_scheme: http://
+    tekton.dev/artifact_items: '{"imports": [["Output", "$(results.output.path)"]],
+      "initialize-ray": []}'
+    sidecar.istio.io/inject: "false"
+    pipelines.kubeflow.org/big_data_passing_format: $(workspaces.$TASK_NAME.path)/artifacts/$ORIG_PR_NAME/$TASKRUN_NAME/$TASK_PARAM_NAME
+    pipelines.kubeflow.org/pipeline_spec: '{"description": "Sample attempt to upload
+      a pipeline", "name": "test-pipeline"}'
+spec:
+  pipelineSpec:
+    tasks:
+    - name: imports
+      taskSpec:
+        steps:
+        - name: main
+          args:
+          - '----output-paths'
+          - $(results.output.path)
+          command:
+          - sh
+          - -ec
+          - |
+            program_path=$(mktemp)
+            printf "%s" "$0" > "$program_path"
+            python3 -u "$program_path" "$@"
+          - |
+            def imports():
+                # Prerequisite - Imports
+                import os
+                from ray.util import inspect_serializability
+                import ray
+                import pyarrow.fs as pq
+                import pandas as pd
+                return True
+
+            def _serialize_bool(bool_value: bool) -> str:
+                if isinstance(bool_value, str):
+                    return bool_value
+                if not isinstance(bool_value, bool):
+                    raise TypeError('Value "{}" has type "{}" instead of bool.'.format(
+                        str(bool_value), str(type(bool_value))))
+                return str(bool_value)
+
+            import argparse
+            _parser = argparse.ArgumentParser(prog='Imports', description='')
+            _parser.add_argument("----output-paths", dest="_output_paths", type=str, nargs=1)
+            _parsed_args = vars(_parser.parse_args())
+            _output_files = _parsed_args.pop("_output_paths", [])
+
+            _outputs = imports(**_parsed_args)
+
+            _outputs = [_outputs]
+
+            _output_serializers = [
+                _serialize_bool,
+
+            ]
+
+            import os
+            for idx, output_file in enumerate(_output_files):
+                try:
+                    os.makedirs(os.path.dirname(output_file))
+                except OSError:
+                    pass
+                with open(output_file, 'w') as f:
+                    f.write(_output_serializers[idx](_outputs[idx]))
+          image: quay.io/thoth-station/s2i-ray-ml-notebook:v0.2.0
+        results:
+        - name: output
+          type: string
+          description: /tmp/outputs/Output/data
+        metadata:
+          labels:
+            pipelines.kubeflow.org/pipelinename: ''
+            pipelines.kubeflow.org/generation: ''
+            pipelines.kubeflow.org/cache_enabled: "true"
+          annotations:
+            pipelines.kubeflow.org/component_spec_digest: '{"name": "Imports", "outputs":
+              [{"name": "Output", "type": "Boolean"}], "version": "Imports@sha256=718b49b1bc2dcb10f4cfae9805d11d8b7666fb2f102134faa6681c6e9e72bac9"}'
+            tekton.dev/template: ''
+      timeout: 525600m
+    - name: initialize-ray
+      taskSpec:
+        steps:
+        - name: main
+          command:
+          - sh
+          - -ec
+          - |
+            program_path=$(mktemp)
+            printf "%s" "$0" > "$program_path"
+            python3 -u "$program_path" "$@"
+          - |
+            def initialize_Ray():
+
+                # Prerequisite - Imports
+                import os
+                from ray.util import inspect_serializability
+                import ray
+                import pyarrow.fs as pq
+                import pandas as pd
+                # Making use of datetime for dates, works for every day of the year (30,31,28 day problems go away)
+                from datetime import date, timedelta
+                from dateutil.relativedelta import relativedelta
+
+                # Prerequisite - Connect to the Ray cluster on OpenShift
+                from ray.util.client import ray as rayclient
+                if rayclient.is_connected():
+                    ray.util.disconnect()
+
+                ray.util.connect('{ray_head}:10001'.format(ray_head='ray-cluster-kubeflow-ray-head'))
+                return True
+
+            import argparse
+            _parser = argparse.ArgumentParser(prog='Initialize Ray', description='')
+            _parsed_args = vars(_parser.parse_args())
+
+            _outputs = initialize_Ray(**_parsed_args)
+          image: quay.io/thoth-station/s2i-ray-ml-notebook:v0.2.0
+        metadata:
+          labels:
+            pipelines.kubeflow.org/pipelinename: ''
+            pipelines.kubeflow.org/generation: ''
+            pipelines.kubeflow.org/cache_enabled: "true"
+          annotations:
+            pipelines.kubeflow.org/component_spec_digest: '{"name": "Initialize Ray",
+              "outputs": [], "version": "Initialize Ray@sha256=d338c43387cf8505f6768aa143c46c09f480e149c77bdbb0e91392d90e0d26c2"}'
+            tekton.dev/template: ''
+      when:
+      - input: $(tasks.condition-1.results.outcome)
+        operator: in
+        values:
+        - "true"
+      timeout: 525600m
+    - name: condition-1
+      params:
+      - name: operand1
+        value: $(tasks.imports.results.output)
+      - name: operand2
+        value: "True"
+      - name: operator
+        value: ==
+      taskSpec:
+        results:
+        - name: outcome
+          type: string
+          description: Conditional task outcome
+        params:
+        - name: operand1
+        - name: operand2
+        - name: operator
+        steps:
+        - name: main
+          command:
+          - sh
+          - -ec
+          - program_path=$(mktemp); printf "%s" "$0" > "$program_path";  python3 -u
+            "$program_path" "$1" "$2"
+          args:
+          - |
+            import sys
+            input1=str.rstrip(sys.argv[1])
+            input2=str.rstrip(sys.argv[2])
+            try:
+              input1=int(input1)
+              input2=int(input2)
+            except:
+              input1=str(input1)
+            outcome="true" if (input1 $(inputs.params.operator) input2) else "false"
+            f = open("/tekton/results/outcome", "w")
+            f.write(outcome)
+            f.close()
+          - $(inputs.params.operand1)
+          - $(inputs.params.operand2)
+          image: python:alpine3.6
+  timeout: 525600m
