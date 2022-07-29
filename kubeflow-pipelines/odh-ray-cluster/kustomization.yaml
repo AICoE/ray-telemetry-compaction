@@ -4,3 +4,5 @@ resources:
   - operator/
   - ray-custom-resources.yaml
   - ray-deploy-kubeflow.yaml
+generators:
+  - ./secret-generator.yaml
