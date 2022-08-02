@@ -10,7 +10,7 @@ def imports()->bool:
     import pandas as pd
     return True
 
-def initialize_Ray():
+def initialize_ray():
 
     # Prerequisite - Imports
     import os
@@ -33,7 +33,7 @@ def initialize_Ray():
 imports_op = components.create_component_from_func(
         imports, base_image='quay.io/thoth-station/s2i-ray-ml-notebook:v0.2.0')
 ray_init_op = components.create_component_from_func(
-        initialize_Ray, base_image='quay.io/thoth-station/s2i-ray-ml-notebook:v0.2.0')
+        initialize_ray, base_image='quay.io/thoth-station/s2i-ray-ml-notebook:v0.2.0')
 
 
 @dsl.pipeline(
