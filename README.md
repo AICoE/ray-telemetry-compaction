@@ -49,6 +49,7 @@ Running the kustomize script sets up the Ray operator, and adds the `ray-ml-note
 ## Misc
 
 You can access the Ray dashboard via OpenShift: Networking -> Routes.
+The process followed and benchmarking result can be found here: https://docs.google.com/document/d/1jNP8azr3v3yRjtoT3uV5qKxdG9TNo91hRKqwrzUWpvM/edit?usp=sharing
 
 
 
