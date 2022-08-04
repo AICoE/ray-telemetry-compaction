@@ -10,7 +10,7 @@ def imports()->bool:
     import pandas as pd
     return True
 
-def initialize_ray():
+def initialize_ray(AWS_ACCESS_KEY_PARAM, AWS_SECRET_KEY_PARAM):
 
     # Prerequisite - Imports
     import os
@@ -55,8 +55,8 @@ def initialize_ray():
 
     # Prerequisite - Create S3FileSystem in PyArrow
     # Why: Allows us to specify a custom endpoint
-    AWS_ACCESS_KEY = "<Ceph S3 Creds Here>"
-    AWS_SECRET_KEY = "<Ceph S3 Creds Here>"
+    AWS_ACCESS_KEY = AWS_ACCESS_KEY_PARAM
+    AWS_SECRET_KEY = AWS_SECRET_KEY_PARAM
     fs_pyarrow = pq.S3FileSystem(access_key=AWS_ACCESS_KEY, secret_key=AWS_SECRET_KEY, endpoint_override=endpoint)
 
     # Prerequisite - Specify day to compact 
@@ -97,10 +97,10 @@ source_path: components.InputPath("k8s/ns/demo-ray/secrets/kubeflow-raydev-aws-s
 )
 
 
-def sample_pipeline():
+def sample_pipeline(AWS_ACCESS_KEY_PARAM: str = "default", AWS_SECRET_KEY_PARAM: str  = "default"):
     importCheck = imports_op()
     with dsl.Condition(importCheck.output == True):
-        ray_init_op()
+        ray_init_op(AWS_ACCESS_KEY_PARAM, AWS_SECRET_KEY_PARAM)
 
 if __name__ == '__main__':
     from kfp_tekton.compiler import TektonCompiler
